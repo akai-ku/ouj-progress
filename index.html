@@ -298,7 +298,10 @@
 
 <header>
   <div class="logo">hoso<span>.track</span></div>
-  <button class="add-btn" id="openModal">＋ 科目を追加</button>
+  <div style="display: flex; gap: 8px;">
+    <button class="add-btn" id="exportBtn" style="background: var(--surface2); color: var(--text); border: 1px solid var(--border2);">📤 保存</button>
+    <button class="add-btn" id="openModal">＋ 科目を追加</button>
+  </div>
 </header>
 
 <main>
@@ -446,6 +449,38 @@ function addSubject() {
 document.getElementById('confirmModal').addEventListener('click', addSubject);
 input.addEventListener('keydown', e => { if (e.key === 'Enter') addSubject(); });
 
+// 先ほどコピーしたURLをここに貼り付け
+const ENDPOINT = https://script.google.com/macros/s/AKfycbzOpE7Jr-oORU8TPD3d2u04EPITIHa-laMXMeTsX0Y0Bw-FREyxa64eAjm7rjlAq3vq/exec; 
+
+document.getElementById('exportBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('exportBtn');
+  const originalText = btn.innerText;
+  
+  if (subjects.length === 0) {
+    alert('保存するデータがありません。');
+    return;
+  }
+
+  try {
+    btn.innerText = '保存中...';
+    btn.style.opacity = '0.5';
+
+    await fetch(ENDPOINT, {
+      method: 'POST',
+      body: JSON.stringify(subjects)
+    });
+
+    alert('スプレッドシートに保存しました！');
+  } catch (e) {
+    console.error(e);
+    alert('保存に失敗しました。URLを確認してください。');
+  } finally {
+    btn.innerText = originalText;
+    btn.style.opacity = '1';
+  }
+});
+
+  
 render();
 </script>
 </body>
