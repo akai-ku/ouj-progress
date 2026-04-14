@@ -126,42 +126,57 @@ function addSubject() {
 document.getElementById('confirmModal').addEventListener('click', addSubject);
 input.addEventListener('keydown', e => { if (e.key === 'Enter') addSubject(); });
 
-// 修正点1: URLをシングルクォーテーションで囲む
+function render() { renderSummary(); renderSubjects(); }
+
+// --- ここから下が修正ポイント ---
+
+// 1. URLを定義 (必ずクォーテーションで囲む)
 const ENDPOINT = 'https://script.google.com/macros/s/AKfycbzOpE7Jr-oORU8TPD3d2u04EPITIHa-laMXMeTsX0Y0Bw-FREyxa64eAjm7rjlAq3vq/exec'; 
 
-document.getElementById('exportBtn').addEventListener('click', async () => {
-  const btn = document.getElementById('exportBtn');
-  const originalText = btn.innerText;
+// 2. 画面が読み込まれたら実行する処理
+window.addEventListener('DOMContentLoaded', () => {
   
-  if (subjects.length === 0) {
-    alert('保存するデータがありません。');
-    return;
-  }
+  // 最初に画面を描画する
+  render();
 
-  try {
-    btn.innerText = '保存中...';
-    btn.style.opacity = '0.5';
+  // 保存ボタンにクリックイベントをつける
+  const exportBtn = document.getElementById('exportBtn');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', async () => {
+      const btn = exportBtn;
+      const originalText = btn.innerText;
+      
+      if (subjects.length === 0) {
+        alert('保存するデータがありません。');
+        return;
+      }
 
-    // 修正点2: mode: 'no-cors' を追加してセキュリティ制限を回避
-    await fetch(ENDPOINT, {
-      method: 'POST',
-      mode: 'no-cors', 
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(subjects)
+      try {
+        btn.innerText = '保存中...';
+        btn.style.opacity = '0.5';
+
+        await fetch(ENDPOINT, {
+          method: 'POST',
+          mode: 'no-cors', 
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(subjects)
+        });
+
+        alert('送信リクエストを完了しました！スプレッドシートを確認してください。');
+      } catch (e) {
+        console.error(e);
+        alert('エラーが発生しました。');
+      } finally {
+        btn.innerText = originalText;
+        btn.style.opacity = '1';
+      }
     });
-
-    // no-corsモードではレスポンスが取得できないため、送信後に少し待って完了とする
-    alert('送信リクエストを完了しました！スプレッドシートを確認してください。');
-  } catch (e) {
-    console.error(e);
-    alert('エラーが発生しました。コンソールを確認してください。');
-  } finally {
-    btn.innerText = originalText;
-    btn.style.opacity = '1';
   }
+
+  // モーダルの開閉などの処理（既存のものをここに入れてもOK）
+  // ...
 });
 
-render();
 </script>
