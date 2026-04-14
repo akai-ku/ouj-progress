@@ -346,7 +346,10 @@
 
 <script>
 const KEY = 'hoso_v3';
-const ENDPOINT = 'https://script.google.com/macros/s/AKfycbzOpE7Jr-oORU8TPD3d2u04EPITIHa-laMXMeTsX0Y0Bw-FREyxa64eAjm7rjlAq3vq/exec'; 
+const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwIVzt1AAvyTH4yqEwYixjDbYPF7eOVnvh810umc6vamIufFSVTJrQh4avTl2l5fBG4/exec'; 
+
+
+  
 
 // --- データ処理 ---
 function load() {
@@ -461,8 +464,23 @@ function render() {
   renderSubjects(); 
 }
 
-// --- 画面起動時の処理 ---
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
+  // --- 追記：起動時にスプレッドシートから読み込む ---
+  try {
+    const response = await fetch(ENDPOINT, { method: 'GET' });
+    if (response.ok) {
+      const remoteData = await response.json();
+      if (remoteData.length > 0) {
+        subjects = remoteData;
+        save(subjects); // ローカルにも保存
+      }
+    }
+  } catch (e) {
+    console.log("スプレッドシートからの読み込みに失敗しました（ローカルデータを使用します）");
+  }
+  // --------------------------------------------
+
+
   render();
 
   // 1. 保存ボタンの設定
