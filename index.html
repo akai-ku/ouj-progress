@@ -1,3 +1,38 @@
+
+<body>
+
+<header>
+  <div class="logo">hoso<span>.track</span></div>
+  <div style="display: flex; gap: 8px;">
+    <button class="add-btn" id="exportBtn" style="background: var(--surface2); color: var(--text); border: 1px solid var(--border2);">📤 保存</button>
+    <button class="add-btn" id="openModal">＋ 科目を追加</button>
+  </div>
+</header>
+
+<main>
+  <div class="summary" id="summary"></div>
+  <div id="subjectList"></div>
+</main>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h3>科目を追加</h3>
+    <input type="text" id="subjectInput" placeholder="科目名（例：日本語概説）" maxlength="30" />
+    <div class="modal-btns">
+      <button id="cancelModal">キャンセル</button>
+      <button class="primary" id="confirmModal">追加する</button>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
 <script>
 const KEY = 'hoso_v3';
 const ENDPOINT = 'https://script.google.com/macros/s/AKfycbzOpE7Jr-oORU8TPD3d2u04EPITIHa-laMXMeTsX0Y0Bw-FREyxa64eAjm7rjlAq3vq/exec'; 
@@ -187,3 +222,4 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 </script>
+</body>
