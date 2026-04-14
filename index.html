@@ -1,6 +1,8 @@
 <script>
 const KEY = 'hoso_v3';
+const ENDPOINT = 'https://script.google.com/macros/s/AKfycbzOpE7Jr-oORU8TPD3d2u04EPITIHa-laMXMeTsX0Y0Bw-FREyxa64eAjm7rjlAq3vq/exec'; 
 
+// --- データ処理 ---
 function load() {
   try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; }
 }
@@ -17,6 +19,7 @@ function pct(s) {
   return Math.round(done / 17 * 100);
 }
 
+// --- 描画処理 ---
 function renderSummary() {
   const total = subjects.length;
   const completed = subjects.filter(s => pct(s) === 100).length;
@@ -83,6 +86,7 @@ function renderSubjects() {
     list.appendChild(card);
   });
 
+  // イベント登録（カード内）
   list.querySelectorAll('.lec').forEach(b => b.addEventListener('click', () => {
     const s = subjects.find(x => x.id === b.dataset.id);
     s.lectures[+b.dataset.i] = !s.lectures[+b.dataset.i];
@@ -106,77 +110,80 @@ function renderSubjects() {
   }));
 }
 
-function render() { renderSummary(); renderSubjects(); }
-
-// Modal
-const overlay = document.getElementById('modalOverlay');
-const input = document.getElementById('subjectInput');
-document.getElementById('openModal').addEventListener('click', () => {
-  overlay.classList.add('open'); input.value = ''; input.focus();
-});
-document.getElementById('cancelModal').addEventListener('click', () => overlay.classList.remove('open'));
-overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
-function addSubject() {
-  const name = input.value.trim();
-  if (!name) { input.focus(); return; }
-  subjects.push({ id: crypto.randomUUID(), name, lectures: Array(15).fill(false), tsushin: 'none', unit: 'none' });
-  save(subjects); render();
-  overlay.classList.remove('open');
+function render() { 
+  renderSummary(); 
+  renderSubjects(); 
 }
-document.getElementById('confirmModal').addEventListener('click', addSubject);
-input.addEventListener('keydown', e => { if (e.key === 'Enter') addSubject(); });
 
-function render() { renderSummary(); renderSubjects(); }
-
-// --- ここから下が修正ポイント ---
-
-// 1. URLを定義 (必ずクォーテーションで囲む)
-const ENDPOINT = 'https://script.google.com/macros/s/AKfycbzOpE7Jr-oORU8TPD3d2u04EPITIHa-laMXMeTsX0Y0Bw-FREyxa64eAjm7rjlAq3vq/exec'; 
-
-// 2. 画面が読み込まれたら実行する処理
+// --- 画面起動時の処理 ---
 window.addEventListener('DOMContentLoaded', () => {
-  
-  // 最初に画面を描画する
   render();
 
-  // 保存ボタンにクリックイベントをつける
+  // 1. 保存ボタンの設定
   const exportBtn = document.getElementById('exportBtn');
   if (exportBtn) {
     exportBtn.addEventListener('click', async () => {
-      const btn = exportBtn;
-      const originalText = btn.innerText;
-      
-      if (subjects.length === 0) {
-        alert('保存するデータがありません。');
-        return;
-      }
-
+      if (subjects.length === 0) return alert('保存するデータがありません。');
       try {
-        btn.innerText = '保存中...';
-        btn.style.opacity = '0.5';
-
+        exportBtn.innerText = '保存中...';
+        exportBtn.style.opacity = '0.5';
         await fetch(ENDPOINT, {
           method: 'POST',
           mode: 'no-cors', 
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(subjects)
         });
-
-        alert('送信リクエストを完了しました！スプレッドシートを確認してください。');
+        alert('送信リクエストを完了しました！');
       } catch (e) {
-        console.error(e);
         alert('エラーが発生しました。');
       } finally {
-        btn.innerText = originalText;
-        btn.style.opacity = '1';
+        exportBtn.innerText = '📤 保存';
+        exportBtn.style.opacity = '1';
       }
     });
   }
 
-  // モーダルの開閉などの処理（既存のものをここに入れてもOK）
-  // ...
-});
+  // 2. モーダル処理の設定
+  const overlay = document.getElementById('modalOverlay');
+  const input = document.getElementById('subjectInput');
+  const openBtn = document.getElementById('openModal');
+  const cancelBtn = document.getElementById('cancelModal');
+  const confirmBtn = document.getElementById('confirmModal');
 
+  if (openBtn) {
+    openBtn.addEventListener('click', () => {
+      overlay.classList.add('open'); 
+      input.value = ''; 
+      input.focus();
+    });
+  }
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => overlay.classList.remove('open'));
+  }
+  if (overlay) {
+    overlay.addEventListener('click', e => { 
+      if (e.target === overlay) overlay.classList.remove('open'); 
+    });
+  }
+
+  function addSubject() {
+    const name = input.value.trim();
+    if (!name) return;
+    subjects.push({ 
+      id: crypto.randomUUID(), 
+      name, 
+      lectures: Array(15).fill(false), 
+      tsushin: 'none', 
+      unit: 'none' 
+    });
+    save(subjects); 
+    render();
+    overlay.classList.remove('open');
+  }
+
+  if (confirmBtn) confirmBtn.addEventListener('click', addSubject);
+  if (input) {
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') addSubject(); });
+  }
+});
 </script>
