@@ -191,11 +191,12 @@
     color: var(--green);
   }
 
-  /* STATUS BUTTONS */
-  .status-row { display: flex; gap: 6px; }
-  .stat-btn {
+  /* TASK TOGGLES（通信指導・単位認定試験） */
+  .task-row { display: flex; gap: 6px; }
+  .task {
     flex: 1;
-    padding: 8px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 9px 10px;
     border-radius: var(--radius-sm);
     border: 1px solid var(--border2);
     background: var(--surface2);
@@ -205,18 +206,28 @@
     font-weight: 500;
     cursor: pointer;
     transition: all 0.15s;
-    text-align: center;
   }
-  .stat-btn:hover { border-color: var(--border2); color: var(--text); }
-  .stat-btn.doing {
-    background: var(--amber-dim);
-    border-color: var(--amber);
-    color: var(--amber);
+  .task:hover { border-color: var(--green); color: var(--text); }
+  .task-check {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 1.5px solid var(--muted);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    line-height: 1;
+    color: transparent;
+    transition: all 0.15s;
+    flex-shrink: 0;
   }
-  .stat-btn.done {
+  .task.done {
     background: var(--green-dim);
     border-color: var(--green);
     color: var(--green);
+  }
+  .task.done .task-check {
+    background: var(--green);
+    border-color: var(--green);
+    color: #0f1a14;
   }
 
   /* MODAL */
@@ -359,7 +370,37 @@ function save(data) {
   localStorage.setItem(KEY, JSON.stringify(data));
 }
 
-let subjects = load();
+// スプレッドシート等から来たデータを安全な形に整える
+function normalize(list) {
+  if (!Array.isArray(list)) return [];
+  return list.map(s => {
+    let lecs = s && s.lectures;
+    if (typeof lecs === 'string') {
+      try { lecs = JSON.parse(lecs); } catch { lecs = lecs.split(','); }
+    }
+    if (!Array.isArray(lecs)) lecs = [];
+    lecs = Array.from({ length: 15 }, (_, i) =>
+      lecs[i] === true || lecs[i] === 'true' || lecs[i] === 'TRUE' || lecs[i] === 1
+    );
+    return {
+      id: String((s && s.id) || crypto.randomUUID()),
+      name: String((s && s.name) || '無題の科目'),
+      lectures: lecs,
+      tsushin: (s && s.tsushin) === 'done' ? 'done' : 'none',
+      unit: (s && s.unit) === 'done' ? 'done' : 'none'
+    };
+  });
+}
+
+function esc(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+let subjects = normalize(load());
 
 function pct(s) {
   const done = s.lectures.filter(Boolean).length
@@ -405,14 +446,14 @@ function renderSubjects() {
       `<button class="lec ${done ? 'done' : ''}" data-id="${s.id}" data-i="${i}">${String(i+1).padStart(2,'0')}</button>`
     ).join('');
 
-    const tsH = (v, label) =>
-      `<button class="stat-btn ${s.tsushin===v ? (v==='doing'?'doing':'done') : ''}" data-id="${s.id}" data-f="tsushin" data-v="${v}">${label}</button>`;
-    const unH = (v, label) =>
-      `<button class="stat-btn ${s.unit===v ? (v==='doing'?'doing':'done') : ''}" data-id="${s.id}" data-f="unit" data-v="${v}">${label}</button>`;
+    const taskH = (f, label) =>
+      `<button class="task ${s[f]==='done' ? 'done' : ''}" data-id="${s.id}" data-f="${f}">
+        <span class="task-check">✓</span>${label}${s[f]==='done' ? '済み' : ''}
+      </button>`;
 
     card.innerHTML = `
       <div class="card-header">
-        <input class="subject-name" value="${s.name}" data-id="${s.id}" />
+        <input class="subject-name" value="${esc(s.name)}" data-id="${s.id}" />
         <div class="card-right">
           <span class="pct-badge">${p}%</span>
           <button class="del-btn" data-del="${s.id}">×</button>
@@ -424,12 +465,8 @@ function renderSubjects() {
         <div class="lec-grid">${lecs}</div>
       </div>
       <div class="section-row">
-        <div class="sec-label">通信指導</div>
-        <div class="status-row">${tsH('doing','提出中')}${tsH('done','提出済み')}</div>
-      </div>
-      <div class="section-row">
-        <div class="sec-label">単位認定試験</div>
-        <div class="status-row">${unH('doing','受験予定')}${unH('done','受験済み')}</div>
+        <div class="sec-label">提出・試験</div>
+        <div class="task-row">${taskH('tsushin','通信指導 提出')}${taskH('unit','単位認定試験 受験')}</div>
       </div>
     `;
     list.appendChild(card);
@@ -441,9 +478,9 @@ function renderSubjects() {
     s.lectures[+b.dataset.i] = !s.lectures[+b.dataset.i];
     save(subjects); render();
   }));
-  list.querySelectorAll('.stat-btn').forEach(b => b.addEventListener('click', () => {
+  list.querySelectorAll('.task').forEach(b => b.addEventListener('click', () => {
     const s = subjects.find(x => x.id === b.dataset.id);
-    s[b.dataset.f] = s[b.dataset.f] === b.dataset.v ? 'none' : b.dataset.v;
+    s[b.dataset.f] = s[b.dataset.f] === 'done' ? 'none' : 'done';
     save(subjects); render();
   }));
   list.querySelectorAll('.del-btn').forEach(b => b.addEventListener('click', () => {
@@ -469,14 +506,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   try {
     const response = await fetch(ENDPOINT, { method: 'GET' });
     if (response.ok) {
-      const remoteData = await response.json();
+      const remoteData = normalize(await response.json());
       if (remoteData.length > 0) {
         subjects = remoteData;
         save(subjects); // ローカルにも保存
       }
     }
   } catch (e) {
-    console.log("スプレッドシートからの読み込みに失敗しました（ローカルデータを使用します）");
+    console.log("スプレッドシートからの読み込みに失敗しました（ローカルデータを使用します）", e);
   }
   // --------------------------------------------
 
@@ -552,3 +589,4 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 </script>
 </body>
+</html>
