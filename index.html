@@ -359,7 +359,37 @@ function save(data) {
   localStorage.setItem(KEY, JSON.stringify(data));
 }
 
-let subjects = load();
+// スプレッドシート等から来たデータを安全な形に整える
+function normalize(list) {
+  if (!Array.isArray(list)) return [];
+  return list.map(s => {
+    let lecs = s && s.lectures;
+    if (typeof lecs === 'string') {
+      try { lecs = JSON.parse(lecs); } catch { lecs = lecs.split(','); }
+    }
+    if (!Array.isArray(lecs)) lecs = [];
+    lecs = Array.from({ length: 15 }, (_, i) =>
+      lecs[i] === true || lecs[i] === 'true' || lecs[i] === 'TRUE' || lecs[i] === 1
+    );
+    return {
+      id: String((s && s.id) || crypto.randomUUID()),
+      name: String((s && s.name) || '無題の科目'),
+      lectures: lecs,
+      tsushin: ['doing','done'].includes(s && s.tsushin) ? s.tsushin : 'none',
+      unit: ['doing','done'].includes(s && s.unit) ? s.unit : 'none'
+    };
+  });
+}
+
+function esc(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+let subjects = normalize(load());
 
 function pct(s) {
   const done = s.lectures.filter(Boolean).length
@@ -412,7 +442,7 @@ function renderSubjects() {
 
     card.innerHTML = `
       <div class="card-header">
-        <input class="subject-name" value="${s.name}" data-id="${s.id}" />
+        <input class="subject-name" value="${esc(s.name)}" data-id="${s.id}" />
         <div class="card-right">
           <span class="pct-badge">${p}%</span>
           <button class="del-btn" data-del="${s.id}">×</button>
@@ -469,14 +499,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   try {
     const response = await fetch(ENDPOINT, { method: 'GET' });
     if (response.ok) {
-      const remoteData = await response.json();
+      const remoteData = normalize(await response.json());
       if (remoteData.length > 0) {
         subjects = remoteData;
         save(subjects); // ローカルにも保存
       }
     }
   } catch (e) {
-    console.log("スプレッドシートからの読み込みに失敗しました（ローカルデータを使用します）");
+    console.log("スプレッドシートからの読み込みに失敗しました（ローカルデータを使用します）", e);
   }
   // --------------------------------------------
 
@@ -552,3 +582,4 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 </script>
 </body>
+</html>
