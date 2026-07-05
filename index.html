@@ -94,6 +94,7 @@
     margin-bottom: 4px;
   }
   .sum-num.green { color: var(--green); }
+  .sum-sub { font-size: 14px; color: var(--muted); }
   .sum-lbl { font-size: 11px; color: var(--muted); }
 
   /* SUBJECT CARD */
@@ -269,6 +270,15 @@
     transition: border-color 0.15s;
   }
   .modal input:focus { border-color: var(--green); }
+  .modal-label {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .modal input[type="number"] {
+    font-family: 'DM Mono', monospace;
+  }
   .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
   .modal-btns button {
     padding: 8px 18px;
@@ -340,6 +350,8 @@
   <div class="modal">
     <h3>科目を追加</h3>
     <input type="text" id="subjectInput" placeholder="科目名（例：日本語概説）" maxlength="30" />
+    <label class="modal-label" for="lecCountInput">授業数（1〜50）</label>
+    <input type="number" id="lecCountInput" min="1" max="50" value="15" />
     <div class="modal-btns">
       <button id="cancelModal">キャンセル</button>
       <button class="primary" id="confirmModal">追加する</button>
@@ -379,7 +391,8 @@ function normalize(list) {
       try { lecs = JSON.parse(lecs); } catch { lecs = lecs.split(','); }
     }
     if (!Array.isArray(lecs)) lecs = [];
-    lecs = Array.from({ length: 15 }, (_, i) =>
+    const count = Math.min(Math.max(lecs.length || 15, 1), 50);
+    lecs = Array.from({ length: count }, (_, i) =>
       lecs[i] === true || lecs[i] === 'true' || lecs[i] === 'TRUE' || lecs[i] === 1
     );
     return {
@@ -406,7 +419,7 @@ function pct(s) {
   const done = s.lectures.filter(Boolean).length
     + (s.tsushin === 'done' ? 1 : 0)
     + (s.unit === 'done' ? 1 : 0);
-  return Math.round(done / 17 * 100);
+  return Math.round(done / (s.lectures.length + 2) * 100);
 }
 
 // --- 描画処理 ---
@@ -414,6 +427,7 @@ function renderSummary() {
   const total = subjects.length;
   const completed = subjects.filter(s => pct(s) === 100).length;
   const lecsDone = subjects.reduce((a, s) => a + s.lectures.filter(Boolean).length, 0);
+  const lecsTotal = subjects.reduce((a, s) => a + s.lectures.length, 0);
   document.getElementById('summary').innerHTML = `
     <div class="sum-card">
       <div class="sum-num">${total}</div>
@@ -424,7 +438,7 @@ function renderSummary() {
       <div class="sum-lbl">修了済み</div>
     </div>
     <div class="sum-card">
-      <div class="sum-num">${lecsDone}</div>
+      <div class="sum-num">${lecsDone}<span class="sum-sub">/${lecsTotal}</span></div>
       <div class="sum-lbl">視聴済み回数</div>
     </div>
   `;
@@ -461,7 +475,7 @@ function renderSubjects() {
       </div>
       <div class="prog-bar"><div class="prog-fill" style="width:${p}%"></div></div>
       <div class="section-row">
-        <div class="sec-label">授業 — 全15回</div>
+        <div class="sec-label">授業 — 全${s.lectures.length}回</div>
         <div class="lec-grid">${lecs}</div>
       </div>
       <div class="section-row">
@@ -547,14 +561,16 @@ window.addEventListener('DOMContentLoaded', async () => {
   // 2. モーダル処理の設定
   const overlay = document.getElementById('modalOverlay');
   const input = document.getElementById('subjectInput');
+  const countInput = document.getElementById('lecCountInput');
   const openBtn = document.getElementById('openModal');
   const cancelBtn = document.getElementById('cancelModal');
   const confirmBtn = document.getElementById('confirmModal');
 
   if (openBtn) {
     openBtn.addEventListener('click', () => {
-      overlay.classList.add('open'); 
-      input.value = ''; 
+      overlay.classList.add('open');
+      input.value = '';
+      countInput.value = '15';
       input.focus();
     });
   }
@@ -570,12 +586,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   function addSubject() {
     const name = input.value.trim();
     if (!name) return;
-    subjects.push({ 
-      id: crypto.randomUUID(), 
-      name, 
-      lectures: Array(15).fill(false), 
-      tsushin: 'none', 
-      unit: 'none' 
+    const count = Math.min(Math.max(parseInt(countInput.value, 10) || 15, 1), 50);
+    subjects.push({
+      id: crypto.randomUUID(),
+      name,
+      lectures: Array(count).fill(false),
+      tsushin: 'none',
+      unit: 'none'
     });
     save(subjects); 
     render();
@@ -585,6 +602,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (confirmBtn) confirmBtn.addEventListener('click', addSubject);
   if (input) {
     input.addEventListener('keydown', e => { if (e.key === 'Enter') addSubject(); });
+  }
+  if (countInput) {
+    countInput.addEventListener('keydown', e => { if (e.key === 'Enter') addSubject(); });
   }
 });
 </script>
